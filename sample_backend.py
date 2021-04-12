@@ -2,6 +2,8 @@ from flask import Flask
 from flask import request
 from flask import jsonify
 from flask_cors import CORS
+import random
+import string
 
 app = Flask(__name__)
 CORS(app)
@@ -68,25 +70,43 @@ def get_users():
         return users
     elif request.method == 'POST':
         userToAdd = request.get_json()
+        userToAdd['id'] = generateID()
         users['users_list'].append(userToAdd)
-        resp = jsonify(success=True)
-        #resp.status_code = 200 #optionally, you can always set a response code. 
-        # 200 is the default code for a normal response
+        resp = jsonify(userToAdd)
+        resp.status_code = 201 # set a response code. 
         return resp
     elif request.method == 'DELETE':
-        delete_user = request.get_json(silent=True)
-        if delete_user :
-            users['users_list'].remove(delete_user)
+        userToDelete = request.get_json(silent=True)
+        try:
+            users['users_list'].remove(userToDelete)
             resp = jsonify(success=True)
-        else:
+            resp.status_code = 204 # set a response code. 
+            return resp
+        except:
             resp = jsonify(success=False)
-        return resp
+            resp.status_code = 404 # set a response code. 
+            return resp
 
-@app.route('/users/<id>')
+@app.route('/users/<id>', methods=['GET', 'DELETE'])
 def get_user(id):
-   if id :
-      for user in users['users_list']:
-        if user['id'] == id:
-           return user
-      return ({})
-   return users
+    if id :
+        for user in users['users_list']:
+            if user['id'] == id:
+                if request.method == 'GET':
+                    return user
+                elif request.method == 'DELETE':
+                    users['users_list'].remove(user)
+                    resp = jsonify(success=True)
+                    resp.status_code = 204 # set a response code. 
+                    return resp
+        resp = jsonify(success=False)
+        resp.status_code = 404 # set a response code.
+        return resp
+    return users
+
+
+def generateID():
+    userID = ''
+    userID += "".join(random.choice(string.ascii_lowercase) for i in range(3))
+    userID += "".join(random.choice(string.digits) for i in range(3))
+    return userID
